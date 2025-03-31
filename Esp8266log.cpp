@@ -10,20 +10,12 @@ std::vector<struct LogEntry> Logger::logEntries;
 const char* Logger::LOG_FILE_PATH = "/data/log.txt";
 unsigned long Logger::lastFlashWriteTime = 0;
 
-// 定义日志结构体
-struct LogEntry {
-    std::string level;
-    std::string tag;
-    std::string message;
-    unsigned long timestamp; // 新增时间戳字段
-};
-
 Logger::Logger(const char* path) {
     // 将初始化逻辑移到构造函数内部
     logFilePath = path;
     logFile = SPIFFS.open(logFilePath, "a");
     if (!logFile) {
-        Serial.Println("Logger init err, Failed to open log file");
+        Serial.println("Logger init err, Failed to open log file");
         return;
     }
 
