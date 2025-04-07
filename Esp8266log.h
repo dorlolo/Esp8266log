@@ -27,13 +27,14 @@ public:
     void err(const char* tag, const char* message);
     void warn(const char* tag, const char* message);
     void debug(const char* tag, const char* message);
-    void checkFlush();
-    void flush();
-    void printLog(PrintOrder order);
-    size_t logCount();
-    void clearFlashLogs();
-    static void setFlashWriteInterval(unsigned long interval);
-    static void setMaxLogEntries(size_t maxEntries);
+    void checkFlush();//如果满足写入条件，则将缓存中的日志写入flash
+    void flush();//将缓存中的日志写入flash
+    void printLog(PrintOrder order);//打印日志，order为打印顺序，ASCENDING为正序，DESCENDING为倒序*
+    size_t logCount(); //获取缓存中日志数量
+    unsigned long countFlashLog(); //统计flash中的日志数量
+    void clearFlashLogs(); //清除flash中的日志
+    static void setFlashWriteInterval(unsigned long interval);//设置写入flash的时间间隔
+    static void setMaxLogEntries(size_t maxEntries);//设置存储的最大日志数量
 private:
     static const char* logFilePath;
     static File logFile;

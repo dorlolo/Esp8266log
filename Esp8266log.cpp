@@ -15,19 +15,7 @@ size_t Logger::MAX_LOG_ENTRIES = 100;
 Logger::Logger(const char* path) {
     // 将初始化逻辑移到构造函数内部
     logFilePath = path;
-    logFile = SPIFFS.open(logFilePath, "r");
-    if (!logFile) {
-        Serial.println("Logger init err, Failed to open log file");
-        return;
-    }
-    while (logFile.available()) {
-        String line = logFile.readStringUntil('\n');
-        if (line.length() > 0) {
-            flashLogCount++;
-        }
-    }
-    Serial.printf("Flash log count: %lu\n", flashLogCount);
-    logFile.close();
+    countFlashLog();
 }
 
 Logger::~Logger() {
@@ -44,11 +32,26 @@ void Logger::setMaxLogEntries(size_t maxEntries) {
     MAX_LOG_ENTRIES = maxEntries;
 }
 
+unsigned long Logger::countFlashLog(){
+    logFile = SPIFFS.open(logFilePath, "r");
+    if (!logFile) {
+        Serial.println("Logger init err, Failed to open log file");
+        return 0;
+    }
+    flashLogCount = 0;
+    while (logFile.available()) {
+        String line = logFile.readStringUntil('\n');
+        if (line.length() > 0) {
+            flashLogCount++;
+        }
+    }
+    logFile.close();
+    return flashLogCount;
+}
 void Logger::log(const char* level, const char* tag, const char* message) {
     std::string tagStr = tag;
     std::string messageStr = message;
-    unsigned long timestamp = millis(); // 获取当前时间戳
-
+    unsigned long timestamp = millis();
     std::string timeStr = formatTime(timestamp);
     Serial.printf("%s %s %s %s\n",timeStr.c_str(), level, tag, message);
 
@@ -89,10 +92,8 @@ void Logger::checkFlush() {
     unsigned long currentTime = millis();
     unsigned long elapsedTime = currentTime - lastFlashWriteTime;
     if (elapsedTime >= FLASH_WRITE_INTERVAL) {
-        // Serial.println("录入数据");
         flush();
     }
-    // Serial.printf("currentTime:%lu    lastFlashWriteTime:%lu    差值:%lu    FLASH_WRITE_INTERVAL:%lu\n",currentTime,lastFlashWriteTime,elapsedTime,FLASH_WRITE_INTERVAL);
 }
 
 std::string Logger::formatTime(unsigned long timestamp) {
@@ -116,20 +117,18 @@ void Logger::flush() {
     if (logEntries.empty()) {
         return; // 如果没有日志需要写入，则直接返回 
     }
-    Serial.printf("Flash log count: %lu\n", flashLogCount);
-    if (logEntries.size() + flashLogCount <= MAX_LOG_ENTRIES) {
+    unsigned long logEntriesSize = logEntries.size();
+    if (logEntriesSize + flashLogCount <= MAX_LOG_ENTRIES) {
         if (!logFile) {
             logFile = SPIFFS.open(logFilePath, "a");
         }
-        if (logFile) {
-            for (const auto& entry : logEntries) {
-                logFile.printf("%lu,%s,%s,%s\n", entry.timestamp, entry.level.c_str(), entry.tag.c_str(), entry.message.c_str());
-            }
-            logFile.close();
-            flashLogCount=flashLogCount+logEntries.size();
-            lastFlashWriteTime = millis();
-            logEntries.clear();
+        for (const auto& entry : logEntries) {
+            logFile.printf("%lu,%s,%s,%s\n", entry.timestamp, entry.level.c_str(), entry.tag.c_str(), entry.message.c_str());
         }
+        logFile.close();
+        flashLogCount=flashLogCount+logEntriesSize;
+        lastFlashWriteTime = millis();
+        logEntries.clear();
         return;
     }
 
@@ -172,10 +171,9 @@ void Logger::flush() {
         SPIFFS.remove(logFilePath);
     }
     logFile = SPIFFS.open(logFilePath, "a");
+    flashLogCount = flashLogEntries.size();
     if (logFile) {
-        flashLogCount = flashLogEntries.size();
         for (const auto& entry : flashLogEntries) {
-            // Serial.printf("录入数据：timestamp:%lu,level:%s,tag:%s,message:%s\n", entry.timestamp, entry.level.c_str(), entry.tag.c_str(), entry.message.c_str());
             logFile.printf("%lu,%s,%s,%s\n", entry.timestamp, entry.level.c_str(), entry.tag.c_str(), entry.message.c_str());
         }
         logFile.close();
