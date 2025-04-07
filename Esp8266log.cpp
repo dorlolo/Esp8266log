@@ -26,6 +26,7 @@ Logger::Logger(const char* path) {
             flashLogCount++;
         }
     }
+    Serial.printf("Flash log count: %lu\n", flashLogCount);
     logFile.close();
 }
 
@@ -54,7 +55,6 @@ void Logger::log(const char* level, const char* tag, const char* message) {
     // 检查最近一次的事件是否和当前事件相同
     if (!logEntries.empty()) {
         const LogEntry& lastEntry = logEntries.back();
-        // 修改比较逻辑，确保比较的是字符串内容
         if (lastEntry.level == level && lastEntry.tag == tagStr && lastEntry.message == messageStr && lastEntry.timestamp == timestamp) {
             return; // 如果相同则不添加新记录
         }
@@ -116,6 +116,7 @@ void Logger::flush() {
     if (logEntries.empty()) {
         return; // 如果没有日志需要写入，则直接返回 
     }
+    Serial.printf("Flash log count: %lu\n", flashLogCount);
     if (logEntries.size() + flashLogCount <= MAX_LOG_ENTRIES) {
         if (!logFile) {
             logFile = SPIFFS.open(logFilePath, "a");
@@ -172,9 +173,8 @@ void Logger::flush() {
     }
     logFile = SPIFFS.open(logFilePath, "a");
     if (logFile) {
-        flashLogCount=0;
+        flashLogCount = flashLogEntries.size();
         for (const auto& entry : flashLogEntries) {
-            flashLogCount++;
             // Serial.printf("录入数据：timestamp:%lu,level:%s,tag:%s,message:%s\n", entry.timestamp, entry.level.c_str(), entry.tag.c_str(), entry.message.c_str());
             logFile.printf("%lu,%s,%s,%s\n", entry.timestamp, entry.level.c_str(), entry.tag.c_str(), entry.message.c_str());
         }
